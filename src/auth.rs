@@ -387,7 +387,9 @@ pub async fn login_apple_delegates<T: AnisetteProvider>(account: &AppleAccount<T
     }
 
     let resp = req.send().await?;
+    let status = resp.status();
     let text = resp.text().await?;
+    eprintln!("[delegates] HTTP {} body({}B): {}", status, text.len(), &text[..text.len().min(1500)]);
 
     let parsed = plist::Value::from_reader(Cursor::new(text.as_str()))?;
     let parsed_dict = parsed.as_dictionary().unwrap();
