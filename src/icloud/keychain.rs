@@ -598,7 +598,6 @@ fn create_escrow_blob(dsid: &str, pass: &[u8], record: &[u8], label: &str, cert:
 
 #[derive(Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 enum EscrowCommand {
     Enroll,
     Getclub,
