@@ -598,6 +598,7 @@ fn create_escrow_blob(dsid: &str, pass: &[u8], record: &[u8], label: &str, cert:
 
 #[derive(Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 enum EscrowCommand {
     Enroll,
     Getclub,
@@ -1707,7 +1708,7 @@ impl<P: AnisetteProvider> KeychainClient<P> {
             command: EscrowCommand::Getrecords,
             label: "com.apple.securebackup.record".to_string(),
             transaction_uuid: txnuid.clone(),
-            user_action_label: "cdpd: unknown activity".to_string(),
+            user_action_label: "com.apple.sbd: escrow recovery".to_string(),
             version: 1,
             ..Default::default()
         }).await?;
@@ -2158,7 +2159,7 @@ impl<P: AnisetteProvider> KeychainClient<P> {
     async fn get_escrow_headers(&self) -> Result<HeaderMap, PushError> {
         let state_lock = self.state.read().await;
         let mut map = HeaderMap::new();
-        map.insert("User-Agent", self.config.get_normal_ua("com.apple.sbd/638.100.48").parse().unwrap());
+        map.insert("User-Agent", "com.apple.sbd/638.100.48 com.apple.iCloudHelper/282".parse().unwrap());
         map.insert("Accept-Language", "en-US,en;q=0.9".parse().unwrap());
         map.insert("x-apple-i-device-type", "1".parse().unwrap());
         map.insert("Accept", "*/*".parse().unwrap());
@@ -2174,7 +2175,8 @@ impl<P: AnisetteProvider> KeychainClient<P> {
             .find(|(k, _)| k.eq_ignore_ascii_case("X-Mme-Client-Info"))
             .map(|(_, v)| v.clone())
             .unwrap_or_default();
-        base_headers.insert("X-Mme-Client-Info".to_string(), self.config.get_adi_mme_info("com.apple.AuthKit/1 (com.apple.sbd/638.100.48)", !existing_client_info.contains("iPhone OS")));
+        base_headers.insert("X-Mme-Client-Info".to_string(),
+            format!("<MacBookPro13,3> <Mac OS X;10.12.6;16G29> <com.apple.AuthKit/1 (com.apple.sbd/638.100.48)>"));
 
         map.extend(base_headers.into_iter().map(|(a, b)| (HeaderName::from_str(&a).unwrap(), b.parse().unwrap())));
 
