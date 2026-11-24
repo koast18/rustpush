@@ -1039,11 +1039,42 @@ pub struct KeychainClientState {
 }
 
 impl KeychainClientState {
+    /// 在 plist 字典里递归找某个键
+    fn find_key_recursive(value: &plist::Value, key: &str) -> Option<String> {
+        match value {
+            plist::Value::Dictionary(d) => {
+                if let Some(v) = d.get(key).and_then(|v| v.as_string()) {
+                    return Some(v.to_string());
+                }
+                d.values().find_map(|v| Self::find_key_recursive(v, key))
+            }
+            plist::Value::Array(a) => a.iter().find_map(|v| Self::find_key_recursive(v, key)),
+            _ => None,
+        }
+    }
+
+    /// 递归找任意包含子串的字符串（用于兜底找 escrowproxy 主机）
+    fn find_str_contains(value: &plist::Value, needle: &str) -> Option<String> {
+        match value {
+            plist::Value::String(s) => {
+                if s.to_lowercase().contains(needle) { Some(s.clone()) } else { None }
+            }
+            plist::Value::Dictionary(d) => d.values().find_map(|v| Self::find_str_contains(v, needle)),
+            plist::Value::Array(a) => a.iter().find_map(|v| Self::find_str_contains(v, needle)),
+            _ => None,
+        }
+    }
+
     pub fn new(dsid: String, adsid: String, delegate: &MobileMeDelegateResponse) -> Option<KeychainClientState> {
+        let config_val = plist::Value::Dictionary(delegate.config.clone());
+        let host = Self::find_key_recursive(&config_val, "escrowProxyUrl")
+            .or_else(|| Self::find_str_contains(&config_val, "escrowproxy"))
+            .unwrap_or_else(|| "https://p97-escrowproxy.icloud.com:443".to_string());
+        eprintln!("  [debug] escrow host = {}", host);
         Some(KeychainClientState {
             dsid,
             adsid,
-            host: delegate.config.get("com.apple.Dataclass.KeychainSync")?.as_dictionary().unwrap().get("escrowProxyUrl")?.as_string().unwrap().to_string(),
+            host,
             state_token: None,
             state: HashMap::new(),
             user_identity: None,
