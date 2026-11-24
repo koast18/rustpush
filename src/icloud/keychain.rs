@@ -2136,7 +2136,14 @@ impl<P: AnisetteProvider> KeychainClient<P> {
 
         let mut base_headers = self.anisette.lock().await.get_headers().await?.clone();
 
-        base_headers.insert("X-Mme-Client-Info".to_string(), self.config.get_adi_mme_info("com.apple.AuthKit/1 (com.apple.sbd/638.100.48)", !base_headers["X-Mme-Client-Info"].contains("iPhone OS")));
+        // anisette 服务器可能返回 "X-MMe-Client-Info"（大小写不同），
+        // 直接 index HashMap 会 panic: no entry found for key
+        let existing_client_info = base_headers
+            .iter()
+            .find(|(k, _)| k.eq_ignore_ascii_case("X-Mme-Client-Info"))
+            .map(|(_, v)| v.clone())
+            .unwrap_or_default();
+        base_headers.insert("X-Mme-Client-Info".to_string(), self.config.get_adi_mme_info("com.apple.AuthKit/1 (com.apple.sbd/638.100.48)", !existing_client_info.contains("iPhone OS")));
 
         map.extend(base_headers.into_iter().map(|(a, b)| (HeaderName::from_str(&a).unwrap(), b.parse().unwrap())));
 
